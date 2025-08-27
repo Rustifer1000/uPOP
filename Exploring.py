@@ -70,7 +70,7 @@ def display_phase_1():
     if st.session_state.movie_weather:
         if st.button("Next: Unpack the Narrative"):
             st.session_state.phase = 2
-            st.experimental_rerun()
+            st.rerun()
 
 
 def display_phase_2():
@@ -98,7 +98,7 @@ def display_phase_2():
     if st.session_state.realization_moment:
         if st.button("Next: Build the Sonic World"):
             st.session_state.phase = 3
-            st.experimental_rerun()
+            st.rerun()
 
 
 def display_phase_3():
@@ -121,7 +121,7 @@ def display_phase_3():
     if st.session_state.vocal_style:
         if st.button("Next: The Final Touch"):
             st.session_state.phase = 4
-            st.experimental_rerun()
+            st.rerun()
 
 
 def display_phase_4():
@@ -137,7 +137,7 @@ def display_phase_4():
             # Clear all session state keys to reset the app
             for key in st.session_state.keys():
                 del st.session_state[key]
-            st.experimental_rerun()
+            st.rerun()
 
 def display_summary():
     """Displays a summary of all the user's answers."""
