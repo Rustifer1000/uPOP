@@ -92,7 +92,7 @@ def configure_api(api_key):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            'gemini-1.5-flash',
+            'gemini-2.0-flash',
             system_instruction=SYSTEM_PROMPT
         )
         st.session_state.model = model
@@ -197,7 +197,15 @@ with col1:
             with st.spinner("Thinking..."):
                 chat = st.session_state.model.start_chat(history=st.session_state.messages[:-1])
                 response = chat.send_message(prompt, stream=True)
-                full_response = st.write_stream(response)
+                
+                # Create a generator that extracts the text from each chunk
+                def stream_text_generator(response_stream):
+                    for chunk in response_stream:
+                        if hasattr(chunk, 'text'):
+                            yield chunk.text
+
+                # Use the generator with st.write_stream to render the response
+                full_response = st.write_stream(stream_text_generator(response))
         
         st.session_state.messages.append({"role": "model", "parts": [full_response]})
 
@@ -223,3 +231,4 @@ with col2:
         st.markdown(f"> {bp.get('artist_purpose', 'N/A')}")
     else:
         st.info("Your blueprint will appear here once it's generated.")
+
