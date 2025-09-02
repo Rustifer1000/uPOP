@@ -92,7 +92,7 @@ def configure_api(api_key):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            'gemini-2.0-flash',
+            'gemini-1.5-flash',
             system_instruction=SYSTEM_PROMPT
         )
         st.session_state.model = model
@@ -117,7 +117,7 @@ def generate_blueprint():
     
     # Use a separate model instance for the summarization task
     summarizer_model = genai.GenerativeModel(
-        'gemini-1.5-flash',
+        'gemini-2.0-flash',
         generation_config={"response_mime_type": "application/json"}
     )
     
@@ -196,25 +196,13 @@ with col1:
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 chat = st.session_state.model.start_chat(history=st.session_state.messages[:-1])
-                response = chat.send_message(prompt, stream=True)
+                response_stream = chat.send_message(prompt, stream=True)
                 
-                # List to store the full response
-                full_response_chunks = []
-
-                # Create a generator that extracts text, appends to the list, and yields for streaming
-                def stream_and_capture(response_stream):
-                    for chunk in response_stream:
-                        if hasattr(chunk, 'text'):
-                            text_chunk = chunk.text
-                            full_response_chunks.append(text_chunk)
-                            yield text_chunk
-                
-                # Use the generator with st.write_stream
-                st.write_stream(stream_and_capture(response))
-
-                # Join the chunks to form the final string
-                full_response = "".join(full_response_chunks)
+                # CORRECTED CODE: Use st.write_stream directly.
+                # It renders the stream to the app and returns the full response string once complete.
+                full_response = st.write_stream(response_stream)
         
+        # Add the AI's complete response to the message history.
         st.session_state.messages.append({"role": "model", "parts": [full_response]})
 
 with col2:
@@ -239,4 +227,3 @@ with col2:
         st.markdown(f"> {bp.get('artist_purpose', 'N/A')}")
     else:
         st.info("Your blueprint will appear here once it's generated.")
-
