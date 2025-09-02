@@ -92,7 +92,7 @@ def configure_api(api_key):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            'gemini-1.5-flash',
+            'gemini-2.0-flash',
             system_instruction=SYSTEM_PROMPT
         )
         st.session_state.model = model
@@ -117,7 +117,7 @@ def generate_blueprint():
     
     # Use a separate model instance for the summarization task
     summarizer_model = genai.GenerativeModel(
-        'gemini-2.0-flash',
+        'gemini-1.5-flash',
         generation_config={"response_mime_type": "application/json"}
     )
     
@@ -184,13 +184,13 @@ with col1:
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message("assistant" if message["role"] == "model" else "user"):
-            st.markdown(message["parts"][0])
+            st.write(message["parts"][0])
 
     # Chat input
     if prompt := st.chat_input("Your thoughts...", disabled=not st.session_state.model):
         st.session_state.messages.append({"role": "user", "parts": [prompt]})
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.write(prompt)
 
         # Get response from Gemini
         with st.chat_message("assistant"):
@@ -227,3 +227,4 @@ with col2:
         st.markdown(f"> {bp.get('artist_purpose', 'N/A')}")
     else:
         st.info("Your blueprint will appear here once it's generated.")
+
