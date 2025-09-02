@@ -92,7 +92,7 @@ def configure_api(api_key):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            'gemini-1.5-flash',
+            'gemini-2.0-flash',
             system_instruction=SYSTEM_PROMPT
         )
         st.session_state.model = model
@@ -117,7 +117,7 @@ def generate_blueprint():
     
     # Use a separate model instance for the summarization task
     summarizer_model = genai.GenerativeModel(
-        'gemini-2.0-flash',
+        'gemini-1.5-flash',
         generation_config={"response_mime_type": "application/json"}
     )
     
@@ -139,12 +139,6 @@ def generate_blueprint():
     except Exception as e:
         st.error(f"An error occurred while generating the blueprint: {e}")
         st.error(f"Raw response from model: {response.text if 'response' in locals() else 'No response'}")
-
-def stream_text_generator(stream):
-    """Yields text chunks from a streaming API response."""
-    for chunk in stream:
-        if hasattr(chunk, 'text'):
-            yield chunk.text
 
 # --- Streamlit UI ---
 
@@ -199,15 +193,26 @@ with col1:
 
         # Get response from Gemini
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                chat = st.session_state.model.start_chat(history=st.session_state.messages[:-1])
-                response_stream = chat.send_message(prompt, stream=True)
-                
-                # CORRECTED CODE: Use a generator to process the stream
-                full_response = st.write_stream(stream_text_generator(response_stream))
-        
-        # Add the AI's complete response to the message history.
-        st.session_state.messages.append({"role": "model", "parts": [full_response]})
+            try:
+                with st.spinner("Thinking..."):
+                    chat = st.session_state.model.start_chat(history=st.session_state.messages[:-1])
+                    response_stream = chat.send_message(prompt, stream=True)
+                    
+                    # CORRECTED CODE: Manually stream and build the response.
+                    response_container = st.empty()
+                    response_chunks = []
+                    for chunk in response_stream:
+                        if hasattr(chunk, 'text'):
+                            text_chunk = chunk.text
+                            response_chunks.append(text_chunk)
+                            response_container.markdown("".join(response_chunks))
+                    
+                    full_response = "".join(response_chunks)
+            
+                # Add the AI's complete response to the message history.
+                st.session_state.messages.append({"role": "model", "parts": [full_response]})
+            except Exception as e:
+                st.error(f"An error occurred while getting the response: {e}")
 
 with col2:
     st.header("Song Blueprint")
