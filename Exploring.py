@@ -198,14 +198,22 @@ with col1:
                 chat = st.session_state.model.start_chat(history=st.session_state.messages[:-1])
                 response = chat.send_message(prompt, stream=True)
                 
-                # Create a generator that extracts the text from each chunk
-                def stream_text_generator(response_stream):
+                # List to store the full response
+                full_response_chunks = []
+
+                # Create a generator that extracts text, appends to the list, and yields for streaming
+                def stream_and_capture(response_stream):
                     for chunk in response_stream:
                         if hasattr(chunk, 'text'):
-                            yield chunk.text
+                            text_chunk = chunk.text
+                            full_response_chunks.append(text_chunk)
+                            yield text_chunk
+                
+                # Use the generator with st.write_stream
+                st.write_stream(stream_and_capture(response))
 
-                # Use the generator with st.write_stream to render the response
-                full_response = st.write_stream(stream_text_generator(response))
+                # Join the chunks to form the final string
+                full_response = "".join(full_response_chunks)
         
         st.session_state.messages.append({"role": "model", "parts": [full_response]})
 
