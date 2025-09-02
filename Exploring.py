@@ -5,8 +5,8 @@ import json
 # --- Configuration and System Prompt ---
 
 # Configure the Gemini API
-# NOTE: This requires the user to enter their API key in the sidebar.
-# For a deployed app, you would use st.secrets["GOOGLE_API_KEY"]
+# NOTE: This app uses Streamlit's secrets management (secrets.toml) to securely
+# store and access the Google API Key.
 st.set_page_config(layout="wide")
 
 # The system prompt defines the AI's persona, goal, and adaptive behavior.
@@ -14,10 +14,12 @@ SYSTEM_PROMPT = """
 You are uPOP, an insightful and adaptive AI music producer. Your goal is to interview an artist to get the core details of a story they want to turn into a pop song.
 
 Your Process:
-1. Greet the artist warmly and explain that you'll be having a conversation to build a "Song Blueprint."
-2. Guide them through 4 phases, but do so naturally, not by explicitly announcing them. The phases are: Core Emotion, Narrative Details, Sonic World, and Artist's Purpose.
-3. Ask one main question at a time. Your questions should be open-ended and encouraging.
-4. Based on their answers, ask insightful follow-up questions to dig deeper.
+1. Your first message to the user is already sent: you've greeted them and asked if they want guidance or want to jump right in. Your next step is to respond to their answer.
+2. **If they ask for guidance:** Provide a brief, evocative explanation. A great story for a pop song is usually a small, specific moment with big feelings. It's not a whole life story, but a single snapshot: the car ride home after the first date, the moment you saw them across a crowded room, the silent breakfast after the fight, the phone call that changed everything. These are moments of change, decision, or intense emotion. They have a clear 'before' and 'after'. After giving this guidance, ask them, "With that in mind, what story are you here to tell today?"
+3. **If they want to jump right in:** Simply say something encouraging like, "Perfect, I'm all ears. Tell me what's on your mind."
+4. Once they share their initial story, proceed with your normal interview process: guiding them naturally through the 4 phases (Core Emotion, Narrative Details, Sonic World, Artist's Purpose) to uncover the details needed for the blueprint.
+5. Ask one main question at a time. Your questions should be open-ended and encouraging.
+6. Based on their answers, ask insightful follow-up questions to dig deeper.
 
 Your Adaptive Strategy (VERY IMPORTANT):
 - If the artist gives short, direct answers: Keep your questions simple and the pace moving. Your goal is a quick, effective session to get the main ideas.
@@ -96,7 +98,7 @@ def configure_api(api_key):
         st.session_state.model = model
         # Start the conversation with a greeting if it's a new session
         if not st.session_state.messages:
-            st.session_state.messages.append({"role": "model", "parts": ["Welcome to the studio! I'm uPOP, your AI producer. Tell me a little about the story you want to turn into a song."]})
+            st.session_state.messages.append({"role": "model", "parts": ["Welcome to the studio! I'm uPOP, your AI producer. Before we dive in, some artists like to talk a bit about what kind of stories make great songs, while others prefer to jump right in. Would you like a little guidance on finding a song-worthy story, or are you ready to tell me yours?"]})
         return True
     except Exception as e:
         st.error(f"Failed to configure API. Please check your key. Error: {e}")
@@ -145,18 +147,20 @@ initialize_session_state()
 
 st.title("🎵 uPOP: The AI Producer's Chair")
 
-# Sidebar for API Key and controls
-with st.sidebar:
-    st.header("Configuration")
-    api_key = st.text_input("Enter your Google API Key", type="password")
-    
-    if st.button("Start Session"):
-        if api_key:
-            with st.spinner("Configuring producer AI..."):
-                configure_api(api_key)
-        else:
-            st.warning("Please enter your API key to begin.")
+# Attempt to configure the API on the first run if the model isn't already set up.
+if not st.session_state.model:
+    try:
+        # Get the API key from Streamlit secrets
+        api_key = st.secrets["GOOGLE_API_KEY"]
+        with st.spinner("Warming up the studio..."):
+            configure_api(api_key)
+    except (KeyError, FileNotFoundError):
+        st.error("API Key not found. Please add your `GOOGLE_API_KEY` to your Streamlit secrets (`.streamlit/secrets.toml`).")
+        st.stop() # Halt execution if the key is not found
 
+# Sidebar for controls
+with st.sidebar:
+    st.header("Controls")
     if st.session_state.model:
         st.success("Producer AI is ready.")
         if st.button("Generate Song Blueprint", type="primary"):
@@ -168,7 +172,6 @@ with st.sidebar:
                 del st.session_state[key]
             st.rerun()
 
-
 # Main layout with chat on the left and blueprint on the right
 col1, col2 = st.columns([2, 1])
 
@@ -176,7 +179,7 @@ with col1:
     st.header("Conversation")
     
     if not st.session_state.model:
-        st.info("Please enter your Google API Key in the sidebar and click 'Start Session' to begin.")
+        st.info("Initializing AI producer...")
     
     # Display chat messages
     for message in st.session_state.messages:
