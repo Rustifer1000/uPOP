@@ -92,7 +92,7 @@ def configure_api(api_key):
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            'gemini-2.0-flash',
+            'gemini-1.5-flash',
             system_instruction=SYSTEM_PROMPT
         )
         st.session_state.model = model
@@ -117,7 +117,7 @@ def generate_blueprint():
     
     # Use a separate model instance for the summarization task
     summarizer_model = genai.GenerativeModel(
-        'gemini-1.5-flash',
+        'gemini-2.0-flash',
         generation_config={"response_mime_type": "application/json"}
     )
     
@@ -140,6 +140,11 @@ def generate_blueprint():
         st.error(f"An error occurred while generating the blueprint: {e}")
         st.error(f"Raw response from model: {response.text if 'response' in locals() else 'No response'}")
 
+def stream_text_generator(stream):
+    """Yields text chunks from a streaming API response."""
+    for chunk in stream:
+        if hasattr(chunk, 'text'):
+            yield chunk.text
 
 # --- Streamlit UI ---
 
@@ -184,13 +189,13 @@ with col1:
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message("assistant" if message["role"] == "model" else "user"):
-            st.write(message["parts"][0])
+            st.markdown(message["parts"][0])
 
     # Chat input
     if prompt := st.chat_input("Your thoughts...", disabled=not st.session_state.model):
         st.session_state.messages.append({"role": "user", "parts": [prompt]})
         with st.chat_message("user"):
-            st.write(prompt)
+            st.markdown(prompt)
 
         # Get response from Gemini
         with st.chat_message("assistant"):
@@ -198,9 +203,8 @@ with col1:
                 chat = st.session_state.model.start_chat(history=st.session_state.messages[:-1])
                 response_stream = chat.send_message(prompt, stream=True)
                 
-                # CORRECTED CODE: Use st.write_stream directly.
-                # It renders the stream to the app and returns the full response string once complete.
-                full_response = st.write_stream(response_stream)
+                # CORRECTED CODE: Use a generator to process the stream
+                full_response = st.write_stream(stream_text_generator(response_stream))
         
         # Add the AI's complete response to the message history.
         st.session_state.messages.append({"role": "model", "parts": [full_response]})
