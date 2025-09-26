@@ -90,8 +90,8 @@ src/
 
 ## Contributing
 
-This project combines the best elements from:
-- Conversational AI producer (Streamlit version)
+This project combines:
+- Conversational AI producer with adaptive questioning
 - Audio generation capabilities (ElevenLabs integration)
 - Modern web interface (Next.js foundation)
 
